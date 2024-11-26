@@ -1,6 +1,6 @@
 parse_mentions <- function(txt) {
   # regex based on: https://atproto.com/specs/handle#handle-identifier-syntax
-  mention_regex <- '[$|\\W](@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)'
+  mention_regex <- '[^|\\W](@([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)'
 
   # drop_n = whitespace + @
   parse_regex(txt, regex = mention_regex, drop_n = 2L)
@@ -15,7 +15,8 @@ parse_urls <- function(txt) {
 }
 
 parse_tags <- function(txt) {
-  tag_regex <- '[$|\\W](#([a-zA-Z0-9_]{1,139}))'
+  # regex base on: https://docs.bsky.app/docs/advanced-guides/post-richtext
+  tag_regex <- '(^|\\s)(#([a-zA-Z0-9_]{1,63}))'
 
   # drop_n = whitespace + #
   parse_regex(txt, regex = tag_regex, drop_n = 2L)
@@ -27,12 +28,13 @@ parse_regex <- function(txt, regex, drop_n = 0L) {
 
   lapply(seq_along(matches), function(m) {
     lapply(seq_len(nrow(matches[[m]])), function(r) {
+      start <- txt_cum_wts[[m]][unname(matches[[m]][r, 1, drop = TRUE])]
       list(
-        start = txt_cum_wts[[m]][unname(matches[[m]][r, 1, drop = TRUE])],
+        start = start,
         end = txt_cum_wts[[m]][unname(matches[[m]][r, 2, drop = TRUE])],
         text = stringr::str_sub(
           string = txt[[m]],
-          start = matches[[m]][r, 1, drop = TRUE] + drop_n,
+          start = matches[[m]][r, 1, drop = TRUE] + ifelse(start == 1, drop_n - 1, drop_n),
           end = matches[[m]][r, 2, drop = TRUE]
         )
       )
